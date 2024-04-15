@@ -1,0 +1,52 @@
+---
+- name: Install node and npm
+  host: webserver
+  tasks:
+  - name: Updateapt repond cache
+    apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+  - name: Install node and npm
+    apt: 
+    pkg:
+      - nodejs
+      - npm
+
+- name: Creat new linux user for node app
+  hosts: webserver
+  tasks:
+    - name: Creat linux user
+      user:
+        name: "{{linux_user}}"
+        comment: Ayaba Admin
+        group: admin
+
+- name: Deploy nodejs app
+  hosts: webserver
+  become: True
+  become_user: "{{linux_name}}"
+  vars_files:
+    - project-vars
+  tasks: 
+    #- name: Copy nodejs folder a a server
+      #copy:
+      #src: "{{location}}-{{version}}.tgz"
+      #dest: /root/app-1.0.0.tgz
+    
+    - name: Unpack the nodejs file
+      unarchive:
+        src: "{{location}}-{{version}}.tgz"
+        dest: "{{user_home_dir}}" # change from /root/ blc we created another user ayaba
+        #remote_src: yes
+        # we could alos do the two steps in one step where it will find the tar file locally and do copying and archiving  in one step (16-19 can be omited)
+    - name: Install dependencies
+      npm:
+        path: "{{user_home_dir}}/package"
+    - name: Start the application
+      command:
+        chdir: "{{user_home_dir}}/package/app"
+        cmd: code server
+      async: 1000
+      poll: 0
+    - name: Ensure app i running
+      shell: ps aux | grep node
+      register: app_status
+    - debug: msg={{app_status}} # One way of  setting vaiable using register is seting it as module execution result
