@@ -1,0 +1,84 @@
+---
+#before the play starts, this initial play checks if server is up and runing
+- name: Wait  for ssh connection
+  host: all
+  agather_facts: False
+  tasks:
+    - name: Ensure ssh port open
+      wait_for:
+        port: 22
+        delay: 10
+        timeout: 100
+        search_regex: OPENSSH
+        host: {{(ansible_ssh_host|default(ansible_host))|default(inventory_hostname)}}
+      vars:
+      ansible_connection: local
+      ansible_python_interpreter: /usr/bin/python
+
+- name: Install python3,  docker and docker-compose
+  hosts: all
+  become: yes # every install here is done with root user hence the placement of this
+  gathering_facts: False
+  tasks:
+    - name: Install python3, and docker
+      vars: #this module allows python2 as interpreter for yum modules to install docker and other packages
+        ansible_python_interpreter: /usr/bin/python
+      yum:
+        name:
+          - python3
+          - docker
+        update_cache: yes
+        state: present
+    - name: Install Docker-compose
+      get_url:
+        url: https://github.com/docker/compose/releases/download/1.29.2/docker-compose-Linux-{{lookup('pipe', 'uname -m')}}"
+        dest: /usr/local/bin/docker-compose
+        mode: +x
+    - name: Start docker
+      systemd:
+        name: docker
+        state: started
+    - name: Install docker python module # This is to enable the docker-image community module to be used
+      pip:
+        name: 
+          - docker
+          - docker-compose
+
+- name: Creat new linux user
+  hosts: all
+  become: yes
+  tasks:
+  - name: creat new linux user
+    user:
+      name: ayaba
+      groups: adm, docker
+    
+
+- name: Start docker containers
+  host: docker_server
+  become: yes
+  become_user: ayaba
+  vars_files:
+    - project-vars
+
+  tasks:
+    - name: Copy docker compose
+      copy:
+        src: /Users/ayaba/this_is_the_path_to_where_you_will_find-the_docker_compose_file
+        dest: /home/ayaba/docker-compose.yaml
+    - name: Docker login
+      docker_login:
+       registry_url: https://index.docker.io/v1/
+       username: abendong
+       password: "{{password}}" #providing password as an external variable file or interactive prompt
+    - name: Start container from compose
+      docker_compose:
+        project_src: /home/ayaba
+
+
+
+
+
+
+
+

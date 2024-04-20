@@ -1,4 +1,6 @@
-version= 1.0.0
-location= /home/ayaba/simple-nodejs/nodejs-app
-user_home_dir= /home/ayaba
-linux_name= ayaba
+version: 1.0.0
+location: /home/ayaba/simple-nodejs/nodejs-app
+linux_name: ayaba
+user_home_dir: /home/{{linux_name}}
+
+docker_password: xxxx
